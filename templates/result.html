@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Analysis Result</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .checkbox-icon {
+            color: green;
+            margin-right: 8px;
+        }
+        .list-section {
+            margin-bottom: 2rem;
+        }
+        ol, ul {
+            margin-left: 1.5rem;
+        }
+        li {
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <!-- Header Section -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white text-center">
+                <h2>Resume Analysis Result</h2>
+            </div>
+        </div>
+
+        <!-- Horizontal Bar Charts -->
+        <div class="row mb-4">
+            <!-- Job Matching Score -->
+            <div class="col-md-6 text-center">
+                <div class="chart-container">
+                    <canvas id="jobMatchChart"></canvas>
+                    <div class="tooltip-box">
+                        <strong>Job Matching Score:</strong>{{ match_percentage }}%<br>
+                        Calculated based on the overlap of key skills and requirements mentioned in the job description and your resume.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATS Score -->
+            <div class="col-md-6 text-center">
+                <div class="chart-container">
+                    <canvas id="atsScoreChart"></canvas>
+                    <div class="tooltip-box">
+                        <strong>Resume ATS Score:</strong>{{ ats_score }}%<br>
+                        Evaluates adherence to ATS standards, such as the presence of keywords, contact information, formatting, and length.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feedback Section -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <!-- Key Skills Section -->
+                <div class="list-section">
+                    <h4 class="text-dark">Key Skills That Align With the Job</h4>
+                    <ul class="list-unstyled">
+                        {% for skill in key_skills %}
+                        {% if skill.strip() %}
+                        <li><span class="checkbox-icon">☑</span>{{ skill }}</li>
+                        {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Missing Skills Section -->
+                <div class="list-section">
+                    <h4 class="text-dark">Missing Skills or Experience</h4>
+                    <ol>
+                        {% for point in missing_skills %}
+                        {% if point.strip() %}
+                        <li>{{ point }}</li>
+                        {% endif %}
+                        {% endfor %}
+                    </ol>
+                </div>
+
+                <!-- Suggestions Section -->
+                <div class="list-section">
+                    <h4 class="text-dark">Suggestions for Improvement</h4>
+                    <ol>
+                        {% for suggestion in suggestions %}
+                        {% if suggestion.strip() %}
+                        <li>{{ suggestion }}</li>
+                        {% endif %}
+                        {% endfor %}
+                    </ol>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <form method="POST" action="/send_email">
+                        <input type="hidden" name="email" value="{{ email }}">
+                        <input type="hidden" name="key_skills" value="{{ key_skills }}">
+                        <input type="hidden" name="missing_skills" value="{{ missing_skills }}">
+                        <input type="hidden" name="suggestions" value="{{ suggestions }}">
+                        <input type="hidden" name="match_percentage" value="{{ match_percentage }}">
+                        <input type="hidden" name="ats_score" value="{{ ats_score }}">
+                        <button type="submit" class="btn btn-primary">Send Result via Email</button>
+                    </form>
+                    <a href="https://web.whatsapp.com/send?{{ ('Here is your resume analysis result:\n\n*Job Matching Score: ' + match_percentage|string + '%*\n*ATS Score: ' + ats_score|string + '%*\n\n*Key Skills:*\n' + key_skills|join('\n') + '\n\n*Missing Skills:*\n' + missing_skills|join('\n') + '\n\n*Suggestions for Improvement:*\n' + suggestions|join('\n'))|urlencode }}" class="btn btn-success" target="_blank">
+                        Send Result via WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "footer.html" %}
+
+    <!-- Chart.js Script -->
+    <script>
+        const jobMatchCtx = document.getElementById('jobMatchChart').getContext('2d');
+        const atsScoreCtx = document.getElementById('atsScoreChart').getContext('2d');
+
+        // Job Matching Score Chart
+        new Chart(jobMatchCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Job Matching Score'],
+                datasets: [{
+                    label: 'Percentage',
+                    data: [{{ match_percentage }}],
+                    backgroundColor: ['#28a745']
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                    decimation: false // Disable decimation to avoid storage errors
+                },
+                scales: {
+                    x: { max: 100 }
+                }
+            }
+        });
+
+        // ATS Score Chart
+        new Chart(atsScoreCtx, {
+            type: 'bar',
+            data: {
+                labels: ['ATS Score'],
+                datasets: [{
+                    label: 'Percentage',
+                    data: [{{ ats_score }}],
+                    backgroundColor: ['#007bff']
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                    decimation: false // Disable decimation to avoid storage errors
+                },
+                scales: {
+                    x: { max: 100 }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

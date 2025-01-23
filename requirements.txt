@@ -1,0 +1,7 @@
+flask
+werkzeug
+openai
+python-docx
+pdfplumber
+beautifulsoup4
+requests
