@@ -137,17 +137,8 @@
 
                 <!-- Action Buttons -->
                 <div class="d-grid gap-2">
-                    <form method="POST" action="/send_email">
-                        <input type="hidden" name="email" value="{{ email }}">
-                        <input type="hidden" name="key_skills" value="{{ key_skills }}">
-                        <input type="hidden" name="missing_skills" value="{{ missing_skills }}">
-                        <input type="hidden" name="suggestions" value="{{ suggestions }}">
-                        <input type="hidden" name="match_percentage" value="{{ match_percentage }}">
-                        <input type="hidden" name="ats_score" value="{{ ats_score }}">
-                        <button type="submit" class="btn btn-primary">Send Result via Email</button>
-                    </form>
                     <a href="https://web.whatsapp.com/send?{{ ('Here is your resume analysis result:\n\n*Job Matching Score: ' + match_percentage|string + '%*\n*ATS Score: ' + ats_score|string + '%*\n\n*Key Skills:*\n' + key_skills|join('\n') + '\n\n*Missing Skills:*\n' + missing_skills|join('\n') + '\n\n*Suggestions for Improvement:*\n' + suggestions|join('\n'))|urlencode }}" class="btn btn-success" target="_blank">
-                        Send Result via WhatsApp
+                        Share Your Result via WhatsApp
                     </a>
                 </div>
             </div>
