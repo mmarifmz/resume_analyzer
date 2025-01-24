@@ -10,7 +10,8 @@
     <div class="container mt-5">
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white text-center">
-                <h2>CV Profile Strength Analyzer</h2>
+                <h2>Resume / CV Strength Analyzer</h2>
+                <p>Resume Analysis Tool that evaluates resumes against job descriptions to calculate key metrics such as Job Matching Score and ATS Compatibility Score. The tool provides actionable feedback to help job seekers optimize their resumes for better job opportunities.</p>
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
@@ -37,11 +38,11 @@
                     <div class="mb-3">
                         <label for="job_description" class="form-label">Enter the Job Description:</label>
                         <textarea name="job_description" id="job_description" rows="6" class="form-control" placeholder="Paste the job description here..."></textarea>
-                        <small class="text-muted">You can provide either a job link or a job description.</small>
+                        <small class="text-muted">You can provide full text of Job Description / Job Detail for match analysis.</small>
                     </div>
 
                     <!-- Submit Button -->
-                    <button type="submit" class="btn btn-primary w-100">Analyze Resume</button>
+                    <button type="submit" class="btn btn-primary w-100">Analyze Resume / CV</button>
                 </form>
             </div>
         </div>

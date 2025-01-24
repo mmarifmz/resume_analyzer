@@ -58,7 +58,7 @@
         <!-- Header Section -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-success text-white text-center">
-                <h2>CV Analysis Result</h2>
+                <h2>Your Resume Match & ATS Score Analysis Result</h2>
             </div>
         </div>
 
@@ -69,7 +69,7 @@
                 <div class="chart-container">
                     <canvas id="jobMatchChart"></canvas>
                     <div class="tooltip-box">
-                        <strong>Job Matching Score:</strong>{{ match_percentage }}%<br>
+                        <strong>Job Matching Score:</strong><b> {{ match_percentage }}%</b><br>
                         Calculated based on the overlap of key skills and requirements mentioned in the job description and your resume.
                     </div>
                 </div>
@@ -79,17 +79,8 @@
             <div class="col-md-6 text-center">
                 <div class="chart-container">
                     <canvas id="atsScoreChart"></canvas>
-                    <div class="tooltip-container">
-                      <div id="ats-score-chart"></div>
-                      <div class="tooltip-text">
-                        What is a good ATS score? <br>
-                        A score of 80% or higher is considered good and may move your resume to a human recruiter.<br>
-                        A score of 60–70% is considered average.<br>
-                        A score below 80% may put your resume in a database for future consideration.
-                      </div>
-                    </div>
                     <div class="tooltip-box">
-                        <strong>Resume ATS Score:</strong>{{ ats_score }}%<br>
+                        <strong>Resume ATS Score:</strong><b> {{ ats_score }}%</b><br>
                         Evaluates adherence to ATS standards, such as the presence of keywords, contact information, formatting, and length.
                     </div>
                 </div>
