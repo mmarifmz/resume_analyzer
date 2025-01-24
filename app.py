@@ -12,7 +12,13 @@ from collections import Counter
 from urllib.parse import urlencode
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = "uploads"
+
+UPLOAD_FOLDER = '/tmp/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Ensure the /tmp/uploads directory exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 app.config["ALLOWED_EXTENSIONS"] = {"docx", "pdf"}
 app.secret_key = "your_secret_key"  # Replace with a secure key
 
@@ -59,8 +65,6 @@ def fetch_job_description(job_link):
         response = requests.get(job_link, headers={"User-Agent": "Mozilla/5.0"})
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
-
-        # Example selector: adjust based on job website structure
         job_description = soup.find("div", class_="job-description").get_text(strip=True)
         return job_description
     except Exception:
@@ -80,9 +84,9 @@ def save_result(email, match_percentage, ats_score, feedback):
 # Match Percentage Calculation
 def calculate_match_percentage(resume_text, job_description):
     def extract_keywords(text):
-        text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+        text = re.sub(r'[^\w\s]', '', text)
         words = text.lower().split()
-        stop_words = {"the", "and", "a", "to", "of", "in", "for", "on", "with", "as", "by", "at", "an", "is", "it"}  # Extend with more stop words
+        stop_words = {"the", "and", "a", "to", "of", "in", "for", "on", "with", "as", "by", "at", "an", "is", "it"}
         keywords = [word for word in words if word not in stop_words and len(word) > 2]
         return Counter(keywords)
 
@@ -96,54 +100,39 @@ def calculate_match_percentage(resume_text, job_description):
 # ATS Score Calculation
 def calculate_ats_score(resume_text, job_description):
     ats_score = 0
-    if re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', resume_text):  # Email pattern
+    if re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', resume_text):
         ats_score += 20
-    if re.search(r'\b\d{3}[-.\s]??\d{3}[-.\s]??\d{4}\b', resume_text):  # Phone number pattern
+    if re.search(r'\b\d{3}[-.\s]??\d{3}[-.\s]??\d{4}\b', resume_text):
         ats_score += 20
 
     match_percentage = calculate_match_percentage(resume_text, job_description)
-    ats_score += min(match_percentage, 40)  # Add up to 40 points based on match percentage
+    ats_score += min(match_percentage, 40)
 
-    if not re.search(r'<[^>]+>', resume_text):  # No HTML tags
+    if not re.search(r'<[^>]+>', resume_text):
         ats_score += 10
 
     resume_length = len(resume_text.split())
-    if 300 <= resume_length <= 800:  # Ideal resume length
+    if 300 <= resume_length <= 800:
         ats_score += 10
 
-    return round(min(ats_score, 100), 2)  # Cap ATS score at 100
+    return round(min(ats_score, 100), 2)
 
 # Extract Specific Sections from Feedback
 def extract_section(feedback, section_title):
-    """
-    Extract specific sections from the feedback using headings.
-    """
     pattern = rf"{section_title}:(.*?)(?=\n\n|$)"
     match = re.search(pattern, feedback, re.DOTALL)
     return match.group(1).strip() if match else "No information available."
 
 #Special text cleansing from feedback from AI
 def clean_text(text):
-    """
-    Cleans the extracted text by:
-    - Stripping leading/trailing whitespace or newlines.
-    - Removing leading numbering, asterisks, dashes, and extra spaces.
-    - Filtering out empty or invalid lines.
-    Returns a list of cleaned lines.
-    """
     import re
     if not text:
         return []
-    
-    # Strip overall whitespace and split into lines
     lines = text.strip().splitlines()
-    
-    # Clean each line and filter out empty lines
     cleaned_lines = [
-        re.sub(r'^[\d\.\*\-\s]+', '', line).strip()  # Remove numbering, asterisks, etc.
-        for line in lines if line.strip()  # Exclude empty or whitespace-only lines
+        re.sub(r'^[\d\.\*\-\s]+', '', line).strip()
+        for line in lines if line.strip()
     ]
-    
     return cleaned_lines
 
 # Resume analysis function
@@ -171,19 +160,12 @@ def analyze_resume(resume_text, job_description):
         messages=messages
     )
     feedback = response["choices"][0]["message"]["content"]
-
-    # Extract and clean feedback sections
     key_skills = clean_text(extract_section(feedback, "Key Skills That Align With the Job"))
     missing_skills = clean_text(extract_section(feedback, "Missing Skills or Experience"))
     suggestions = clean_text(extract_section(feedback, "Suggestions for Improvement"))
-
-    # Calculate match percentage and ATS score
     match_percentage = calculate_match_percentage(resume_text, job_description)
     ats_score = calculate_ats_score(resume_text, job_description)
-
     return key_skills, missing_skills, suggestions, match_percentage, ats_score
-
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -206,7 +188,7 @@ def index():
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(file_path)
 
             try:
@@ -217,12 +199,9 @@ def index():
                 else:
                     return "Unsupported file format.", 400
 
-                # Analyze resume and calculate dynamic scores
                 key_skills, missing_skills, suggestions, match_percentage, ats_score = analyze_resume(
                     resume_text, job_description
                 )
-
-                # Save the result
                 combined_feedback = f"Key Skills: {key_skills}\n\nMissing Skills: {missing_skills}\n\nSuggestions: {suggestions}"
                 save_result(email, match_percentage, ats_score, combined_feedback)
 
