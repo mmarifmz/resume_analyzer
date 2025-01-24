@@ -3,6 +3,9 @@ import sqlite3
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 import docx
 import pdfplumber
 import requests
@@ -13,7 +16,7 @@ from urllib.parse import urlencode
 
 app = Flask(__name__)
 
-UPLOAD_FOLDER = '/tmp/uploads'
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Set uploads folder in the current working directory
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Ensure the /tmp/uploads directory exists
@@ -22,8 +25,10 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 app.config["ALLOWED_EXTENSIONS"] = {"docx", "pdf"}
 app.secret_key = "your_secret_key"  # Replace with a secure key
 
+
+
 # OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")  # Replace with your OpenAI API key
+  # Replace with your OpenAI API key
 
 # Register a custom Jinja2 filter for URL encoding
 @app.template_filter('urlencode')
@@ -100,9 +105,9 @@ def calculate_match_percentage(resume_text, job_description):
 # ATS Score Calculation
 def calculate_ats_score(resume_text, job_description):
     ats_score = 0
-    if re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b', resume_text):
+    if re.search(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}', resume_text):
         ats_score += 20
-    if re.search(r'\b\d{3}[-.\s]??\d{3}[-.\s]??\d{4}\b', resume_text):
+    if re.search(r'\d{3}[-.\s]??\d{3}[-.\s]??\d{4}', resume_text):
         ats_score += 20
 
     match_percentage = calculate_match_percentage(resume_text, job_description)
@@ -119,8 +124,14 @@ def calculate_ats_score(resume_text, job_description):
 
 # Extract Specific Sections from Feedback
 def extract_section(feedback, section_title):
-    pattern = rf"{section_title}:(.*?)(?=\n\n|$)"
+    """
+    Extract specific sections from the feedback using headings.
+    """
+    print(f"Extracting section: {section_title}")  # Debug
+    pattern = rf"{re.escape(section_title)}:(.*?)(?=\n\n|$)"
     match = re.search(pattern, feedback, re.DOTALL)
+    if not match:
+        print(f"Section not found: {section_title}")  # Debug
     return match.group(1).strip() if match else "No information available."
 
 #Special text cleansing from feedback from AI
@@ -137,6 +148,7 @@ def clean_text(text):
 
 # Resume analysis function
 def analyze_resume(resume_text, job_description):
+    # Prepare the prompt as a conversation
     messages = [
         {"role": "system", "content": "You are a professional career advisor."},
         {
@@ -155,21 +167,90 @@ def analyze_resume(resume_text, job_description):
             """
         }
     ]
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages
-    )
-    feedback = response["choices"][0]["message"]["content"]
+
+    try:
+        # Use the updated OpenAI API syntax
+        response = client.chat.completions.create(model="gpt-3.5-turbo",  # or another model like "gpt-4"
+        messages=messages)
+        feedback = response.choices[0].message.content
+    except openai.OpenAIError as e:
+        print("OpenAI API Error:", e)
+        feedback = f"Error: {e}"
+
+    # Extract feedback sections
     key_skills = clean_text(extract_section(feedback, "Key Skills That Align With the Job"))
     missing_skills = clean_text(extract_section(feedback, "Missing Skills or Experience"))
     suggestions = clean_text(extract_section(feedback, "Suggestions for Improvement"))
+
+    # Calculate match percentage and ATS score
     match_percentage = calculate_match_percentage(resume_text, job_description)
     ats_score = calculate_ats_score(resume_text, job_description)
+
+    # Return results
     return key_skills, missing_skills, suggestions, match_percentage, ats_score
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     if request.method == "POST":
+        # Handle user action for existing file
+        action = request.form.get("action")
+        if action:  # If the user action (use or replace) is set
+            filename = request.form.get("filename")
+            email = request.form.get("email")
+            job_description = request.form.get("job_description", "").strip()
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+            if action == "use":
+                # Use the existing file
+                if filename.endswith(".docx"):
+                    resume_text = extract_text_from_docx(file_path)
+                elif filename.endswith(".pdf"):
+                    resume_text = extract_text_from_pdf(file_path)
+
+                # Analyze the resume
+                key_skills, missing_skills, suggestions, match_percentage, ats_score = analyze_resume(
+                    resume_text, job_description
+                )
+
+                # Render results
+                return render_template(
+                    "result.html",
+                    email=email,
+                    key_skills=key_skills,
+                    missing_skills=missing_skills,
+                    suggestions=suggestions,
+                    match_percentage=match_percentage,
+                    ats_score=ats_score,
+                )
+
+            elif action == "replace":
+                # Replace the existing file
+                file = request.files["resume"]
+                file.save(file_path)
+
+                # Process the file as usual after replacing
+                if filename.endswith(".docx"):
+                    resume_text = extract_text_from_docx(file_path)
+                elif filename.endswith(".pdf"):
+                    resume_text = extract_text_from_pdf(file_path)
+
+                # Analyze the resume
+                key_skills, missing_skills, suggestions, match_percentage, ats_score = analyze_resume(
+                    resume_text, job_description
+                )
+
+                # Render results
+                return render_template(
+                    "result.html",
+                    email=email,
+                    key_skills=key_skills,
+                    missing_skills=missing_skills,
+                    suggestions=suggestions,
+                    match_percentage=match_percentage,
+                    ats_score=ats_score,
+                )
+
+        # Regular file upload handling
         try:
             email = request.form["email"]
             job_link = request.form.get("job_link", "").strip()
@@ -188,9 +269,22 @@ def index():
 
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(file_path)
+            file_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
 
+            if os.path.exists(file_path):
+                # File exists: Ask user for action
+                return render_template(
+                    "file_exists.html",
+                    filename=filename,
+                    email=email,
+                    job_description=job_description,
+                )
+
+
+
+            # Save and process new file
+            print(f"Saving file to: {file_path}")
+            file.save(file_path)
             try:
                 if filename.endswith(".docx"):
                     resume_text = extract_text_from_docx(file_path)
@@ -199,9 +293,12 @@ def index():
                 else:
                     return "Unsupported file format.", 400
 
+                # Analyze the resume
                 key_skills, missing_skills, suggestions, match_percentage, ats_score = analyze_resume(
                     resume_text, job_description
                 )
+
+                # Save the result
                 combined_feedback = f"Key Skills: {key_skills}\n\nMissing Skills: {missing_skills}\n\nSuggestions: {suggestions}"
                 save_result(email, match_percentage, ats_score, combined_feedback)
 
@@ -212,7 +309,7 @@ def index():
                     missing_skills=missing_skills,
                     suggestions=suggestions,
                     match_percentage=match_percentage,
-                    ats_score=ats_score
+                    ats_score=ats_score,
                 )
             finally:
                 os.remove(file_path)

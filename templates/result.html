@@ -21,6 +21,36 @@
         li {
             margin-bottom: 0.5rem;
         }
+        /* Tooltip container styling */
+        .tooltip-container {
+          position: relative;
+          display: inline-block;
+        }
+
+        /* Hidden tooltip text */
+        .tooltip-container .tooltip-text {
+          visibility: hidden;
+          width: 250px; /* Adjust width as needed */
+          background-color: #333;
+          color: #fff;
+          text-align: left;
+          border-radius: 5px;
+          padding: 10px;
+          position: absolute;
+          z-index: 1;
+          bottom: 100%; /* Position above the chart */
+          left: 50%;
+          transform: translateX(-50%);
+          opacity: 0;
+          transition: opacity 0.3s;
+          font-size: 12px;
+        }
+
+        /* Show tooltip on hover */
+        .tooltip-container:hover .tooltip-text {
+          visibility: visible;
+          opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -28,7 +58,7 @@
         <!-- Header Section -->
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-success text-white text-center">
-                <h2>Resume Analysis Result</h2>
+                <h2>CV Analysis Result</h2>
             </div>
         </div>
 
@@ -49,6 +79,15 @@
             <div class="col-md-6 text-center">
                 <div class="chart-container">
                     <canvas id="atsScoreChart"></canvas>
+                    <div class="tooltip-container">
+                      <div id="ats-score-chart"></div>
+                      <div class="tooltip-text">
+                        What is a good ATS score? <br>
+                        A score of 80% or higher is considered good and may move your resume to a human recruiter.<br>
+                        A score of 60–70% is considered average.<br>
+                        A score below 80% may put your resume in a database for future consideration.
+                      </div>
+                    </div>
                     <div class="tooltip-box">
                         <strong>Resume ATS Score:</strong>{{ ats_score }}%<br>
                         Evaluates adherence to ATS standards, such as the presence of keywords, contact information, formatting, and length.

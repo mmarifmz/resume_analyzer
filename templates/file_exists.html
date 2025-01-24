@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Exists</title>
+</head>
+<body>
+    <h1>File Already Exists</h1>
+    <p>The file <strong>{{ filename }}</strong> already exists in the system. What would you like to do?</p>
+    <form action="/" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="email" value="{{ email }}">
+        <input type="hidden" name="job_description" value="{{ job_description }}">
+        <input type="hidden" name="filename" value="{{ filename }}">
+        <button type="submit" name="action" value="replace">Replace the existing file</button>
+        <button type="submit" name="action" value="use">Use the existing file</button>
+    </form>
+</body>
+</html>
